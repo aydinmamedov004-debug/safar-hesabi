@@ -1,0 +1,562 @@
+<title>Səfər Hesabı</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: sol sütunda giriş (dostlar + xərc forması), sağda nəticə (balans, köçürmələr, matris); altda xərc siyahısı və qeydlər. Telefonda tək sütun. */
+:root{
+  --bg:#EEF3F4; --surface:#FFFFFF; --ink:#13232A; --muted:#566870; --line:#D3DEE1;
+  --accent:#0A6B6F; --accent-ink:#FFFFFF; --accent-soft:#DCEFEF;
+  --pos:#17784A; --pos-soft:#DDF1E5; --neg:#B23A2E; --neg-soft:#F8E2DF; --warn-soft:#FFF1CF; --warn-ink:#6B4E00;
+  --font-display:"Space Grotesk","Inter",system-ui,sans-serif;
+  --font-body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E181C; --surface:#16252B; --ink:#E6EFF1; --muted:#9AB0B8; --line:#28404A;
+    --accent:#4FC3C7; --accent-ink:#06282A; --accent-soft:#17383D;
+    --pos:#5FD394; --pos-soft:#143A28; --neg:#FF8D80; --neg-soft:#43201C; --warn-soft:#3E3213; --warn-ink:#F2D27A;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E181C; --surface:#16252B; --ink:#E6EFF1; --muted:#9AB0B8; --line:#28404A;
+  --accent:#4FC3C7; --accent-ink:#06282A; --accent-soft:#17383D;
+  --pos:#5FD394; --pos-soft:#143A28; --neg:#FF8D80; --neg-soft:#43201C; --warn-soft:#3E3213; --warn-ink:#F2D27A;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;line-height:1.2}
+h1{font-size:30px;font-weight:700;letter-spacing:-.01em}
+h2{font-size:19px;font-weight:700}
+h3{font-size:15px;font-weight:700}
+p{margin:0}
+.num,td.n,th.n{font-variant-numeric:tabular-nums}
+header{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between}
+header p{color:var(--muted);max-width:60ch;margin-top:4px}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+button,.btn{font:inherit;font-weight:500;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:8px 14px;border-radius:6px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button.primary:hover{filter:brightness(1.08)}
+button.danger{color:var(--neg)}
+button.small{padding:4px 10px;font-size:13px}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.banner{background:var(--warn-soft);color:var(--warn-ink);padding:10px 14px;border-radius:6px;font-size:14px}
+.grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:20px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
+.col{display:flex;flex-direction:column;gap:20px;min-width:0}
+section.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.sub{color:var(--muted);font-size:13px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:500;color:var(--muted);min-width:0}
+input[type=text],input[type=number],input[type=date],select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%;min-width:0}
+.names{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;align-self:flex-start}
+.seg label{padding:7px 12px;cursor:pointer;font-size:14px;font-weight:500;color:var(--muted);border-right:1px solid var(--line)}
+.seg label:last-child{border-right:0}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label:has(input:checked){background:var(--accent);color:var(--accent-ink)}
+.seg label:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:-2px}
+.parts{display:flex;flex-direction:column;gap:6px}
+.prow{display:grid;grid-template-columns:auto minmax(0,1fr) 110px;gap:10px;align-items:center;padding:6px 10px;border:1px solid var(--line);border-radius:6px}
+.prow input[type=number]{padding:5px 8px}
+.prow.off{opacity:.55}
+.msg{font-size:14px;min-height:20px}
+.msg.err{color:var(--neg)} .msg.ok{color:var(--pos)}
+.bal{display:flex;flex-direction:column;gap:10px}
+.brow{display:grid;grid-template-columns:minmax(70px,110px) minmax(0,1fr) 120px;gap:10px;align-items:center}
+.brow .who{font-weight:600;overflow-wrap:anywhere}
+.brow .meta{font-size:12px;color:var(--muted)}
+.bar{position:relative;height:12px;background:var(--bg);border-radius:6px}
+.bar::after{content:"";position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:var(--line)}
+.bar i{position:absolute;top:0;bottom:0;border-radius:6px}
+.bar i.p{left:50%;background:var(--pos)}
+.bar i.m{right:50%;background:var(--neg)}
+.amt{text-align:right;font-weight:600}
+.amt.p{color:var(--pos)} .amt.m{color:var(--neg)}
+.xfers{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.xfers li{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;padding:10px 12px;border-radius:6px;background:var(--accent-soft)}
+.xfers .arrow{color:var(--muted)}
+.xfers .sum{margin-left:auto;font-weight:700;font-family:var(--font-display)}
+.done{padding:12px;border-radius:6px;background:var(--pos-soft);color:var(--pos);font-weight:600}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:6px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:12px;font-weight:600;color:var(--muted);background:var(--bg)}
+td.n,th.n{text-align:right}
+tr:last-child td{border-bottom:0}
+td.cell.has{background:var(--accent-soft);font-weight:600}
+td.cell.zero{color:var(--muted)}
+td.self{background:var(--bg);color:var(--muted)}
+tfoot td{font-weight:600;background:var(--bg)}
+.corner{font-size:11px;line-height:1.3}
+.ex-name{white-space:normal;min-width:130px;overflow-wrap:anywhere}
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:20px}
+.notes ul{margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.notes p{margin-top:6px}
+#copyArea{display:none;min-height:150px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px}
+.head-row{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between}
+@media (prefers-reduced-motion:no-preference){.bar i{transition:width .25s}}
+</style>
+
+<div class="wrap">
+<header>
+  <div>
+    <h1>Səfər Hesabı</h1>
+    <p>Beş dostun ortaq xərcləri. Xərcləri daxil edin, proqram hər kəsin balansını və kimin kimə nə qədər ödəyəcəyini hesablasın.</p>
+  </div>
+  <div class="actions">
+    <button id="btnSample" type="button">Nümunə məlumatı yüklə</button>
+    <button id="btnClear" type="button" class="danger">Hamısını təmizlə</button>
+  </div>
+</header>
+<div id="banner" class="banner" hidden>Bu səhifədə nümunə məlumatlar var. Öz xərclərinizi yazmaq üçün «Hamısını təmizlə» düyməsini basın.</div>
+
+<div class="grid">
+  <div class="col">
+    <section class="card">
+      <div><h2>Dostlar</h2><p class="sub">Adları dəyişə bilərsiniz. Say beşdir.</p></div>
+      <div class="names" id="names"></div>
+    </section>
+
+    <section class="card">
+      <h2>Yeni xərc</h2>
+      <form id="expForm" autocomplete="off" novalidate>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="row2">
+            <label class="f" for="fDesc">Nə üçün?<input type="text" id="fDesc" placeholder="Məsələn: Otel, Benzin"></label>
+            <label class="f" for="fAmount">Məbləğ (₼)<input type="number" id="fAmount" inputmode="decimal" step="0.01" min="0" placeholder="0,00"></label>
+          </div>
+          <div class="row2">
+            <label class="f" for="fPayer">Kim ödəyib?<select id="fPayer"></select></label>
+            <label class="f" for="fDate">Tarix<input type="date" id="fDate"></label>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <span class="sub" style="font-weight:500">Necə bölünsün?</span>
+            <div class="seg" role="radiogroup" aria-label="Bölgü üsulu">
+              <label><input type="radio" name="mode" value="equal" checked>Bərabər</label>
+              <label><input type="radio" name="mode" value="custom">Fərdi məbləğlər</label>
+            </div>
+          </div>
+          <div class="parts" id="parts"></div>
+          <div class="head-row">
+            <span class="sub" id="splitInfo"></span>
+            <button type="button" class="small" id="btnFill" hidden>Bərabər doldur</button>
+          </div>
+          <div class="msg" id="formMsg" role="status"></div>
+          <button type="submit" class="primary">Xərci əlavə et</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <div class="col">
+    <section class="card">
+      <div><h2>Balans</h2><p class="sub">Ödədiyi məbləğ ilə payı arasındakı fərq. Yaşıl: ona qaytarılmalıdır. Qırmızı: o ödəməlidir.</p></div>
+      <div class="bal" id="balances"></div>
+    </section>
+
+    <section class="card">
+      <div class="head-row">
+        <div><h2>Kim kimə nə qədər ödəyir</h2><p class="sub" id="modeNote"></p></div>
+        <div class="seg" role="radiogroup" aria-label="Hesablaşma rejimi">
+          <label><input type="radio" name="smode" value="min" checked>Ən az köçürmə</label>
+          <label><input type="radio" name="smode" value="direct">Birbaşa borclar</label>
+        </div>
+      </div>
+      <div id="transfers"></div>
+      <div class="tw"><table id="matrix"></table></div>
+      <div class="actions">
+        <button type="button" id="btnCopy">Nəticəni kopyala</button>
+      </div>
+      <textarea id="copyArea" readonly aria-label="Nəticə mətni"></textarea>
+    </section>
+  </div>
+</div>
+
+<section class="card">
+  <div class="head-row"><h2>Xərclər</h2><span class="sub" id="expTotal"></span></div>
+  <div class="tw"><table id="expTable"></table></div>
+</section>
+
+<section class="card">
+  <h2>Tapşırığa dair qeydlər</h2>
+  <div class="notes">
+    <div>
+      <h3>Tələbi necə başa düşdüm</h3>
+      <p>Beş dost birlikdə səfərə çıxır. Xərcləri müxtəlif adamlar ödəyir və hər xərcdə hamı iştirak etməyə bilər. Proqram xərcləri qəbul etməli, hər kəsin xalis vəziyyətini tapmalı və sonda kimin kimə nə qədər ödəyəcəyini cədvəldə göstərməlidir.</p>
+    </div>
+    <div>
+      <h3>Yanaşma</h3>
+      <ul>
+        <li>Hər xərc üçün ödəyən, iştirakçılar və bölgü (bərabər ya da fərdi məbləğ) seçilir.</li>
+        <li>Hər şəxsin balansı: ödədiyi məbləğ çıx öz payı. Balansların cəmi həmişə sıfırdır.</li>
+        <li>«Ən az köçürmə» rejimi borcluları ən böyük alacaqlılarla uyğunlaşdırır, nəticədə ən çoxu 4 köçürmə olur.</li>
+        <li>«Birbaşa borclar» rejimi hər xərcin borcunu birbaşa ödəyənə yazır, qarşılıqlı borcları xalis edir.</li>
+        <li>Bütün məbləğlər qəpiklə tam ədədlərdə hesablanır. Bərabər bölgüdə qalıq qəpik iştirakçılar arasında paylanır, beləliklə cəm həmişə tuta bilir.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Əlavə imkanlar</h3>
+      <ul>
+        <li>İstənilən xərcdə yalnız seçilmiş dostların iştirakı.</li>
+        <li>Fərdi məbləğlərlə bölgü və cəmin yoxlanması.</li>
+        <li>Nümunə məlumat, bir kliklə təmizləmə, brauzerdə avtomatik saxlama.</li>
+        <li>Nəticəni mətn kimi kopyalama.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Qəbul etdiyim fərziyyələr</h3>
+      <ul>
+        <li>Yeganə valyuta manatdır (₼), məzənnə yoxdur.</li>
+        <li>Dostların sayı beşdir, adlar dəyişdirilə bilər.</li>
+        <li>Hesablaşma səfərin sonunda bir dəfəyə edilir, faiz və ya gecikmə yoxdur.</li>
+        <li>Ödəyən şəxs xərcdə iştirak etməyə də bilər (məsələn, hədiyyə alıb).</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Tamamlaya bilmədiyim hissələr</h3>
+      <ul>
+        <li>Xərci redaktə etmək yoxdur, silib yenidən əlavə etmək lazımdır.</li>
+        <li>Məlumat yalnız bu brauzerdə saxlanır, dostlar arasında canlı paylaşılmır.</li>
+        <li>CSV, PDF və çap yoxdur, çünki bu səhifənin mühiti fayl yükləməyə icazə vermir. Əvəzində nəticəni kopyalamaq olur.</li>
+        <li>Çox valyuta və qəbz şəkli yoxdur.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>AI ilə iş</h3>
+      <p>Proqramı Claude ilə yazdım. Hesablama hissəsini ayrıca Node-da nümunə məlumat və təsadüfi testlərlə yoxladım: balansların cəmi sıfır olur, köçürmələr hər kəsin balansını tam sıfırlayır.</p>
+    </div>
+  </div>
+</section>
+</div>
+
+<script>
+// CORE START
+var N = 5;
+function splitExpense(e){
+  var shares = [0,0,0,0,0];
+  if (e.mode === 'custom'){
+    for (var i=0;i<N;i++) shares[i] = (e.parts.indexOf(i) >= 0) ? (e.shares[i] || 0) : 0;
+    return shares;
+  }
+  var ps = e.parts.slice().sort(function(a,b){return a-b;});
+  var n = ps.length; if (!n) return shares;
+  var base = Math.floor(e.cents / n), rem = e.cents - base * n;
+  var start = ((e.id % n) + n) % n;
+  for (var k=0;k<n;k++){
+    var extra = ((k - start + n) % n) < rem ? 1 : 0;
+    shares[ps[k]] = base + extra;
+  }
+  return shares;
+}
+function computeAll(expenses){
+  var paid=[0,0,0,0,0], owed=[0,0,0,0,0];
+  var debt=[]; for (var a=0;a<N;a++){ debt.push([0,0,0,0,0]); }
+  expenses.forEach(function(e){
+    var sh = splitExpense(e);
+    paid[e.payer] += e.cents;
+    for (var i=0;i<N;i++){
+      owed[i] += sh[i];
+      if (i !== e.payer) debt[i][e.payer] += sh[i];
+    }
+  });
+  var net = paid.map(function(p,i){ return p - owed[i]; });
+  // birbaşa borclar: qarşılıqlı xalis
+  var direct=[]; for (var r=0;r<N;r++){ direct.push([0,0,0,0,0]); }
+  for (var x=0;x<N;x++) for (var y=0;y<N;y++){
+    if (x!==y){ var d = debt[x][y] - debt[y][x]; if (d>0) direct[x][y]=d; }
+  }
+  // ən az köçürmə
+  var cred=[], deb=[];
+  net.forEach(function(v,i){ if (v>0) cred.push({i:i,a:v}); else if (v<0) deb.push({i:i,a:-v}); });
+  var transfers=[];
+  while (cred.length && deb.length){
+    cred.sort(function(p,q){return q.a-p.a;});
+    deb.sort(function(p,q){return q.a-p.a;});
+    var c=cred[0], d2=deb[0], m=Math.min(c.a,d2.a);
+    transfers.push({from:d2.i,to:c.i,amt:m});
+    c.a-=m; d2.a-=m;
+    if (c.a===0) cred.shift();
+    if (d2.a===0) deb.shift();
+  }
+  var minM=[]; for (var s=0;s<N;s++){ minM.push([0,0,0,0,0]); }
+  transfers.forEach(function(t){ minM[t.from][t.to]+=t.amt; });
+  var directList=[];
+  for (var u=0;u<N;u++) for (var v2=0;v2<N;v2++) if (direct[u][v2]>0) directList.push({from:u,to:v2,amt:direct[u][v2]});
+  return {paid:paid,owed:owed,net:net,direct:direct,directList:directList,transfers:transfers,minMatrix:minM};
+}
+function parseCents(str){
+  if (str===null || str===undefined) return NaN;
+  var s = String(str).trim().replace(/\s/g,'').replace(',', '.');
+  if (!/^\d+(\.\d{1,2})?$/.test(s)) return NaN;
+  var parts = s.split('.');
+  var frac = ((parts[1]||'') + '00').slice(0,2);
+  return parseInt(parts[0],10)*100 + parseInt(frac,10);
+}
+function fmt(c){
+  var neg = c<0; c = Math.abs(c);
+  var whole = Math.floor(c/100), frac = c%100;
+  var w = String(whole).replace(/\B(?=(\d{3})+(?!\d))/g,' ');
+  return (neg?'−':'') + w + ',' + (frac<10?'0':'') + frac + ' ₼';
+}
+// CORE END
+
+var DEFAULT_NAMES = ['Aydın','Leyla','Elçin','Nigar','Rəşad'];
+var KEY = 'seferHesabi.v1';
+var state = { names: DEFAULT_NAMES.slice(), expenses: [], nextId: 1, sample: false };
+
+function sampleExpenses(){
+  var d = function(day){ return '2026-08-' + (day<10?'0':'') + day; };
+  return [
+    {id:1,desc:'Otel (3 gecə)',cents:60000,payer:0,parts:[0,1,2,3,4],mode:'equal',shares:{},date:d(14)},
+    {id:2,desc:'Benzin',cents:12000,payer:2,parts:[0,1,2,3,4],mode:'equal',shares:{},date:d(14)},
+    {id:3,desc:'Restoran',cents:18550,payer:1,parts:[0,1,2,3,4],mode:'equal',shares:{},date:d(15)},
+    {id:4,desc:'Muzey biletləri',cents:6000,payer:3,parts:[0,1,2,3],mode:'equal',shares:{},date:d(15)},
+    {id:5,desc:'Market',cents:7430,payer:4,parts:[0,1,2,3,4],mode:'equal',shares:{},date:d(16)},
+    {id:6,desc:'Taksi',cents:4500,payer:0,parts:[0,1],mode:'custom',shares:{0:1500,1:3000},date:d(16)}
+  ];
+}
+function load(){
+  try{
+    var raw = localStorage.getItem(KEY);
+    if (raw){
+      var s = JSON.parse(raw);
+      if (s && s.names && s.names.length===N && Array.isArray(s.expenses)){ state = s; return; }
+    }
+  }catch(e){}
+  state.expenses = sampleExpenses(); state.nextId = 7; state.sample = true;
+}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+function esc(s){ return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function nm(i){ return (state.names[i] || '').trim() || ('Dost ' + (i+1)); }
+function $(id){ return document.getElementById(id); }
+
+/* ---- Dostlar ---- */
+function buildNames(){
+  var box = $('names'); box.innerHTML='';
+  for (var i=0;i<N;i++){
+    var inp = document.createElement('input');
+    inp.type='text'; inp.id='name'+i; inp.value=state.names[i]; inp.maxLength=20;
+    inp.setAttribute('aria-label','Dost '+(i+1)+' adı');
+    (function(idx,el){
+      el.addEventListener('input',function(){ state.names[idx]=el.value; refreshNameLabels(); render(); save(); });
+    })(i,inp);
+    box.appendChild(inp);
+  }
+}
+
+/* ---- Forma ---- */
+function buildParts(){
+  var box = $('parts'); box.innerHTML='';
+  for (var i=0;i<N;i++){
+    var row = document.createElement('div'); row.className='prow'; row.id='prow'+i;
+    row.innerHTML = '<input type="checkbox" id="pc'+i+'" checked aria-label="İştirak edir"><label for="pc'+i+'" id="pl'+i+'"></label><input type="number" id="pa'+i+'" step="0.01" min="0" inputmode="decimal" placeholder="0,00" aria-label="Məbləğ" disabled>';
+    box.appendChild(row);
+  }
+  for (var j=0;j<N;j++){
+    (function(k){
+      $('pc'+k).addEventListener('change', updateSplitUI);
+      $('pa'+k).addEventListener('input', updateSplitUI);
+    })(j);
+  }
+  refreshNameLabels();
+}
+function refreshNameLabels(){
+  var cur = $('fPayer').value;
+  var sel = $('fPayer'); sel.innerHTML='';
+  for (var i=0;i<N;i++){
+    var o = document.createElement('option'); o.value=i; o.textContent = nm(i); sel.appendChild(o);
+    var l = $('pl'+i); if (l) l.textContent = nm(i);
+  }
+  if (cur !== '') sel.value = cur;
+}
+function curMode(){ return document.querySelector('input[name=mode]:checked').value; }
+function updateSplitUI(){
+  var custom = curMode()==='custom';
+  var cents = parseCents($('fAmount').value);
+  var sel = [], sum = 0, bad = false;
+  for (var i=0;i<N;i++){
+    var on = $('pc'+i).checked;
+    $('prow'+i).classList.toggle('off', !on);
+    var amtEl = $('pa'+i);
+    amtEl.disabled = !(custom && on);
+    amtEl.style.visibility = custom ? 'visible' : 'hidden';
+    if (on){ sel.push(i); if (custom){ var c = parseCents(amtEl.value||'0'); if (isNaN(c)) bad = true; else sum += c; } }
+  }
+  $('btnFill').hidden = !custom;
+  var info = $('splitInfo');
+  if (!custom){
+    if (!sel.length) info.textContent = 'Ən azı bir iştirakçı seçin.';
+    else if (!isNaN(cents) && cents>0) info.textContent = sel.length + ' nəfər, adambaşı təxminən ' + fmt(Math.round(cents/sel.length));
+    else info.textContent = sel.length + ' nəfər iştirak edir.';
+  } else {
+    if (isNaN(cents)) info.textContent = 'Əvvəlcə ümumi məbləği yazın.';
+    else if (bad) info.textContent = 'Fərdi məbləğlərdə yanlış format var.';
+    else { var diff = cents - sum; info.textContent = diff===0 ? 'Fərdi məbləğlərin cəmi uyğundur.' : (diff>0 ? 'Qalıq bölünməyib: ' + fmt(diff) : 'Artıq yazılıb: ' + fmt(-diff)); }
+  }
+}
+function fillEqual(){
+  var cents = parseCents($('fAmount').value);
+  if (isNaN(cents)) return;
+  var sel=[]; for (var i=0;i<N;i++) if ($('pc'+i).checked) sel.push(i);
+  if (!sel.length) return;
+  var tmp = splitExpense({id:state.nextId,cents:cents,parts:sel,mode:'equal',shares:{}});
+  sel.forEach(function(i){ $('pa'+i).value = (tmp[i]/100).toFixed(2); });
+  updateSplitUI();
+}
+function showMsg(t,kind){ var m=$('formMsg'); m.textContent=t; m.className='msg '+(kind||''); }
+function onSubmit(ev){
+  ev.preventDefault();
+  var desc = $('fDesc').value.trim();
+  var cents = parseCents($('fAmount').value);
+  var payer = parseInt($('fPayer').value,10);
+  var mode = curMode();
+  var parts=[]; for (var i=0;i<N;i++) if ($('pc'+i).checked) parts.push(i);
+  if (!desc) return showMsg('Xərcin nə üçün olduğunu yazın.','err');
+  if (isNaN(cents) || cents<=0) return showMsg('Məbləği düzgün yazın, məsələn 45,50.','err');
+  if (!parts.length) return showMsg('Ən azı bir iştirakçı seçin.','err');
+  var shares = {};
+  if (mode==='custom'){
+    var sum=0;
+    for (var k=0;k<parts.length;k++){
+      var c = parseCents($('pa'+parts[k]).value||'0');
+      if (isNaN(c)) return showMsg(nm(parts[k]) + ' üçün məbləğ yanlışdır.','err');
+      shares[parts[k]] = c; sum += c;
+    }
+    if (sum !== cents) return showMsg('Fərdi məbləğlərin cəmi ' + fmt(sum) + ', ümumi məbləğ isə ' + fmt(cents) + '. Fərq: ' + fmt(cents-sum) + '.','err');
+  }
+  var date = $('fDate').value;
+  state.expenses.push({id:state.nextId++,desc:desc,cents:cents,payer:payer,parts:parts,mode:mode,shares:shares,date:date});
+  $('fDesc').value=''; $('fAmount').value='';
+  for (var j=0;j<N;j++){ $('pa'+j).value=''; }
+  showMsg('«' + desc + '» əlavə olundu.','ok');
+  updateSplitUI(); render(); save();
+  $('fDesc').focus();
+}
+
+/* ---- Göstərmə ---- */
+function renderBalances(r){
+  var maxAbs = 1; r.net.forEach(function(v){ if (Math.abs(v)>maxAbs) maxAbs=Math.abs(v); });
+  var h='';
+  for (var i=0;i<N;i++){
+    var v=r.net[i], w=Math.round(Math.abs(v)/maxAbs*50);
+    var cls = v>0?'p':(v<0?'m':'');
+    h += '<div class="brow"><div><div class="who">'+esc(nm(i))+'</div><div class="meta">ödəyib '+fmt(r.paid[i])+' · payı '+fmt(r.owed[i])+'</div></div>'
+      + '<div class="bar" aria-hidden="true">' + (v>0?'<i class="p" style="width:'+w+'%"></i>':(v<0?'<i class="m" style="width:'+w+'%"></i>':'')) + '</div>'
+      + '<div class="amt num '+cls+'">'+(v>0?'+':'')+fmt(v)+'</div></div>';
+  }
+  $('balances').innerHTML = h;
+}
+function sMode(){ return document.querySelector('input[name=smode]:checked').value; }
+function renderSettle(r){
+  var mode=sMode();
+  var list = mode==='min' ? r.transfers : r.directList;
+  var mat = mode==='min' ? r.minMatrix : r.direct;
+  $('modeNote').textContent = mode==='min'
+    ? 'Hamını sıfıra çatdıran ən az sayda köçürmə. Sətir ödəyən, sütun alandır.'
+    : 'Hər xərcin borcu birbaşa ödəyənə yazılır, qarşılıqlı borclar xalis edilir. Sətir ödəyən, sütun alandır.';
+  var t='';
+  if (!state.expenses.length) t = '<p class="sub">Hələ xərc yoxdur.</p>';
+  else if (!list.length) t = '<div class="done">Hamı bərabərdir, heç kim heç kimə borclu deyil.</div>';
+  else {
+    t = '<ul class="xfers">';
+    list.slice().sort(function(a,b){return b.amt-a.amt;}).forEach(function(x){
+      t += '<li><strong>'+esc(nm(x.from))+'</strong><span class="arrow">→</span><strong>'+esc(nm(x.to))+'</strong><span class="sum num">'+fmt(x.amt)+'</span></li>';
+    });
+    t += '</ul>';
+  }
+  $('transfers').innerHTML = t;
+  var m = '<thead><tr><th class="corner">Ödəyən ↓ &nbsp; Alan →</th>';
+  for (var j=0;j<N;j++) m += '<th class="n">'+esc(nm(j))+'</th>';
+  m += '<th class="n">Cəmi ödəyir</th></tr></thead><tbody>';
+  var colSum=[0,0,0,0,0];
+  for (var a=0;a<N;a++){
+    var rowSum=0;
+    m += '<tr><th>'+esc(nm(a))+'</th>';
+    for (var b=0;b<N;b++){
+      var v = mat[a][b]; rowSum+=v; colSum[b]+=v;
+      if (a===b) m += '<td class="n self">–</td>';
+      else if (v>0) m += '<td class="n cell has">'+fmt(v)+'</td>';
+      else m += '<td class="n cell zero">0</td>';
+    }
+    m += '<td class="n">'+(rowSum?fmt(rowSum):'0')+'</td></tr>';
+  }
+  m += '</tbody><tfoot><tr><td>Cəmi alır</td>';
+  var tot=0; for (var c=0;c<N;c++){ m += '<td class="n">'+(colSum[c]?fmt(colSum[c]):'0')+'</td>'; tot+=colSum[c]; }
+  m += '<td class="n">'+(tot?fmt(tot):'0')+'</td></tr></tfoot>';
+  $('matrix').innerHTML = m;
+}
+function renderExpenses(){
+  var t = '<thead><tr><th>Xərc</th><th class="n">Məbləğ</th><th>Ödəyən</th><th>Bölgü</th><th>Tarix</th><th></th></tr></thead><tbody>';
+  if (!state.expenses.length) t += '<tr><td colspan="6" class="ex-name" style="color:var(--muted)">Hələ xərc əlavə edilməyib. Sol tərəfdəki formadan başlayın.</td></tr>';
+  var total=0;
+  state.expenses.forEach(function(e,idx){
+    total += e.cents;
+    var who = e.parts.length===N ? 'Hamı' : e.parts.map(nm).join(', ');
+    var how = e.mode==='custom' ? 'fərdi' : 'bərabər';
+    t += '<tr><td class="ex-name">'+esc(e.desc)+'</td><td class="n">'+fmt(e.cents)+'</td><td>'+esc(nm(e.payer))+'</td><td class="ex-name">'+esc(who)+' <span class="sub">('+how+')</span></td><td>'+esc(e.date||'')+'</td><td><button type="button" class="small danger" data-del="'+idx+'" aria-label="'+esc(e.desc)+' xərcini sil">Sil</button></td></tr>';
+  });
+  t += '</tbody>';
+  $('expTable').innerHTML = t;
+  $('expTotal').textContent = state.expenses.length ? (state.expenses.length+' xərc, cəmi '+fmt(total)) : '';
+}
+function render(){
+  var r = computeAll(state.expenses);
+  renderBalances(r); renderSettle(r); renderExpenses();
+  $('banner').hidden = !state.sample;
+  return r;
+}
+function summaryText(){
+  var r = computeAll(state.expenses);
+  var list = sMode()==='min' ? r.transfers : r.directList;
+  var lines = ['Səfər hesabı', ''];
+  var total = state.expenses.reduce(function(s,e){return s+e.cents;},0);
+  lines.push('Cəmi xərc: ' + fmt(total), '');
+  lines.push('Balans:');
+  for (var i=0;i<N;i++) lines.push('  ' + nm(i) + ': ' + (r.net[i]>0?'+':'') + fmt(r.net[i]));
+  lines.push('', 'Ödənişlər:');
+  if (!list.length) lines.push('  Hamı bərabərdir.');
+  list.forEach(function(x){ lines.push('  ' + nm(x.from) + ' → ' + nm(x.to) + ': ' + fmt(x.amt)); });
+  return lines.join('\n');
+}
+function copySummary(){
+  var txt = summaryText(), ta = $('copyArea');
+  ta.value = txt;
+  var showFallback = function(){ ta.style.display='block'; ta.focus(); ta.select(); };
+  try{
+    navigator.clipboard.writeText(txt).then(function(){
+      $('btnCopy').textContent = 'Kopyalandı';
+      setTimeout(function(){ $('btnCopy').textContent='Nəticəni kopyala'; },1600);
+    }, showFallback);
+  }catch(e){ showFallback(); }
+}
+
+/* ---- Başlanğıc ---- */
+load();
+buildNames(); buildParts();
+$('fDate').value = new Date().toISOString().slice(0,10);
+document.querySelectorAll('input[name=mode]').forEach(function(el){ el.addEventListener('change', updateSplitUI); });
+document.querySelectorAll('input[name=smode]').forEach(function(el){ el.addEventListener('change', render); });
+$('fAmount').addEventListener('input', updateSplitUI);
+$('btnFill').addEventListener('click', fillEqual);
+$('expForm').addEventListener('submit', onSubmit);
+$('btnCopy').addEventListener('click', copySummary);
+$('expTable').addEventListener('click', function(ev){
+  var b = ev.target.closest('[data-del]'); if (!b) return;
+  state.expenses.splice(parseInt(b.getAttribute('data-del'),10),1);
+  render(); save();
+});
+$('btnSample').addEventListener('click', function(){
+  state.names = DEFAULT_NAMES.slice(); state.expenses = sampleExpenses(); state.nextId = 7; state.sample = true;
+  buildNames(); refreshNameLabels(); render(); save(); showMsg('','');
+});
+$('btnClear').addEventListener('click', function(){
+  state.expenses = []; state.sample = false; state.nextId = 1;
+  render(); save(); showMsg('Siyahı təmizləndi. İlk xərci əlavə edin.','ok');
+});
+updateSplitUI(); render();
+</script>
